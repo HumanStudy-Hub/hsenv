@@ -1,0 +1,113 @@
+{
+ "id": "fixture_score",
+ "data": {},
+ "arms": [
+  {
+   "id": "a",
+   "n_paper": 60
+  },
+  {
+   "id": "b",
+   "n_paper": 60
+  }
+ ],
+ "stages": {
+  "q": {
+   "responses": [
+    {
+     "id": "x",
+     "kind": "slider",
+     "range": [
+      0,
+      100
+     ],
+     "prompt": "rate"
+    },
+    {
+     "id": "att",
+     "kind": "choice",
+     "prompt": "pick one",
+     "options": [
+      {
+       "code": 1,
+       "label": "one"
+      },
+      {
+       "code": 2,
+       "label": "two"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "flow": {
+  "stage": "q"
+ },
+ "exclusions": [],
+ "units": {
+  "p": {
+   "per": "session",
+   "fields": {
+    "x": "answer('q.x')",
+    "hi": "answer('q.x') > 50"
+   }
+  }
+ },
+ "keyed": {
+  "answers": {
+   "q.x": "(50 if bernoulli(0.5) else 90) if arm == 'a' else (20 if bernoulli(0.5) else 60)",
+   "q.att": "1"
+  }
+ },
+ "analysis": {
+  "effects": [
+   {
+    "id": "main",
+    "unit": "p",
+    "role": "test",
+    "contrast": {
+     "kind": "two_groups",
+     "treatment": "a",
+     "reference": "b"
+    },
+    "compute": {
+     "op": "mean_difference",
+     "field": "x",
+     "groupBy": "arm"
+    },
+    "reported": {
+     "cells": {
+      "a": {
+       "mean": 70,
+       "sd": 20,
+       "n": 60
+      },
+      "b": {
+       "mean": 40,
+       "sd": 20,
+       "n": 60
+      }
+     },
+     "test": {
+      "statistic": "t",
+      "value": 8.2,
+      "df": 118,
+      "p": "<.001"
+     },
+     "cite": {
+      "label": "verbatim"
+     }
+    }
+   }
+  ],
+  "targets": [],
+  "unsupported": []
+ },
+ "meta": {
+  "citation": "Invented fixture (CC0-1.0): a made-up two-arm rating study; no real paper.",
+  "licence": {
+   "paper": "CC0-1.0"
+  }
+ }
+}

@@ -1,0 +1,27 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]"
+      - name: Import check
+        run: python -c "import hsenv.engine, hsenv.checks, hsenv.rewards, hsenv.serve_mcp, hsenv.serve_http"
+      - name: Test suite
+        env:
+          HSENV_JSONSCHEMA: "1"
+        run: python -m pytest -q

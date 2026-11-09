@@ -1,0 +1,111 @@
+{
+ "schema_version": "1",
+ "id": "fixture_mini",
+ "meta": {
+  "citation": "Invented fixture (CC0-1.0): a made-up one-question study; no real paper.",
+  "licence": {
+   "paper": "CC0-1.0"
+  },
+  "sources": {
+   "paper": "paper.pdf"
+  },
+  "sample": {
+   "n": 10
+  }
+ },
+ "arms": [
+  {
+   "id": "main",
+   "n_paper": 10,
+   "cite": {
+    "label": "reported",
+    "source": "paper",
+    "page": 3
+   }
+  }
+ ],
+ "data": {
+  "q": {
+   "text": "How sure are you?",
+   "cite": {
+    "label": "verbatim",
+    "source": "paper",
+    "page": 4
+   }
+  }
+ },
+ "stages": {
+  "q": {
+   "content": [
+    {
+     "id": "t",
+     "value": {
+      "expr": "data['q']"
+     }
+    }
+   ],
+   "responses": [
+    {
+     "id": "x",
+     "kind": "slider",
+     "range": [
+      0,
+      100
+     ],
+     "prompt": "rate",
+     "widget": "hslider",
+     "cite": {
+      "label": "verbatim",
+      "source": "paper",
+      "page": 4
+     }
+    }
+   ],
+   "presentation": {
+    "back": "not_allowed",
+    "advance": "self"
+   }
+  }
+ },
+ "flow": {
+  "seq": [
+   {
+    "stage": "q"
+   },
+   {
+    "repeat": {
+     "stage": "q"
+    },
+    "until": "True",
+    "max": 2,
+    "on_max": "flag"
+   }
+  ]
+ },
+ "units": {
+  "s": {
+   "per": "session",
+   "fields": {
+    "x": "answer('q.x')"
+   }
+  }
+ },
+ "exclusions": [],
+ "analysis": {
+  "targets": [
+   {
+    "id": "m",
+    "unit": "s",
+    "field": "x",
+    "stat": "mean"
+   }
+  ],
+  "effects": [],
+  "unsupported": []
+ },
+ "keyed": {
+  "answers": {
+   "q.x": "50"
+  }
+ }
+}
