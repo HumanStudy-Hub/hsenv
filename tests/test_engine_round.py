@@ -1,4 +1,4 @@
-"""Engine round of 2026-11-08 (sandbox lesson.md "NEXT ENGINE ROUND" a-i): private config, expression limits,
+"""Engine round of 2026-11-08 (the "next engine round" items a-i): private config, expression limits,
 asset confinement, unresolved expressions in States, cross-page joins, ratio designs, declared reading annotations,
 image marks as fragment boundaries, '|' inside reading content."""
 import json
@@ -297,7 +297,7 @@ class H_ImageMarkFragments(unittest.TestCase):
 
 
 class KeyedSign(unittest.TestCase):
-    def test_zero_is_no_sign(self):   # LESSONS 301
+    def test_zero_is_no_sign(self):
         from hsenv.checks import same_sign
         self.assertFalse(same_sign(0, -0.3))
         self.assertFalse(same_sign(0.0, 0.3))

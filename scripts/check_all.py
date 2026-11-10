@@ -7,7 +7,7 @@ import glob, json, os, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-if sys.version_info < (3, 11):   # coding rules use regex features of Python 3.11+ (atomic groups); LESSONS 286
+if sys.version_info < (3, 11):   # coding rules use regex features of Python 3.11+ (atomic groups)
     sys.exit("check_all needs Python 3.11+ (found %s); try /usr/local/bin/python3" % sys.version.split()[0])
 from hsenv.checks import PRIVATE   # study-specific settings live in the private config, never in this script
 PY = sys.executable

@@ -9,7 +9,7 @@ how a study runs.
 | HTTP (JSON) | `python3 -m hsenv.serve_http [--port 8765] [--host 127.0.0.1] [--allow-host NAME] [--studies DIR] [--only ...] [--arm ...] [--seed N]` |
 
 Both also take `--max-sessions N` (default 256, `$HSENV_MAX_SESSIONS`), `--ttl SEC` (default 7200, `$HSENV_TTL`),
-`--max-opens N` (sessions per client and study) and `--full-history`; HTTP also takes `--participant-tokens FILE`. Install the package (`pip install git+https://github.com/HumanStudy-Hub/hsenv@v0.8.0`), or run from a clone of this repository. Use Python
+`--max-opens N` (sessions per client and study) and `--full-history`; HTTP also takes `--participant-tokens FILE`. Install the package (`pip install git+https://github.com/HumanStudy-Hub/hsenv@v0.8.1`), or run from a clone of this repository. Use Python
 3.11 or later, because `score` needs it. Installed from the wheel, the server has no studies of its own: pass
 `--studies DIR` (or `HSENV_STUDIES`). A server that finds no studies, or an `--only` id it cannot find, stops
 with an error (exit 2) instead of serving an empty list.

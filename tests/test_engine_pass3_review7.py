@@ -32,7 +32,7 @@ class AnchorForms(unittest.TestCase):
 
 
 class NarrowLegacyForms(unittest.TestCase):
-    """Coordinator ruling after round 7: an optional article, 'callout' directly before a picture phrase, and the
+    """Maintainer ruling after round 7: an optional article, 'callout' directly before a picture phrase, and the
     die-face phrases (optionally '+ showing <n> pips' and a position clause); nothing broader."""
 
     def test_marks(self):

@@ -1,4 +1,4 @@
-"""Engine pass 2 (sandbox lesson.md "NEXT ENGINE PASS" and "Engine pass also" items): matcher fixes (review-5 M1/M2,
+"""Engine pass 2 (the "next engine pass" items): matcher fixes (review-5 M1/M2,
 joins, quotes, cells, marks, normalisation, style report), blocked group arms, hidden expression ranges, per-group
 unit arms, roles in States, statistic vocabulary, printed item data, public-package pieces."""
 import json

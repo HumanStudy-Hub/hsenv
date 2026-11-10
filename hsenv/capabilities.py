@@ -4,7 +4,7 @@
 Usage: python -m hsenv.capabilities <project> [--check]
        python -m hsenv.capabilities <study folder with protocol.json> --protocol [--check]
 
-hsenv.capabilities is the one home of these rules (V080-PLATFORM §6: Bench scripts/research/capabilities.py and the
+hsenv.capabilities is the one home of these rules (platform release rules: Bench scripts/research/capabilities.py and the
 desktop build copy become re-exports of this module). protocol_capabilities() is the rule for a protocol study
 (protocol.json): replayable = some arm runnable and not on release_hold; humanBenchmark = an effect carries a
 reported human value. Program-route projects keep the rules below.

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hsenv"
-version = "0.8.0"
+version = "0.8.1"
 description = "HumanStudy sandbox engine: run protocol v1 studies (protocol.json) step by step, score runs against the paper"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -16,6 +16,8 @@ dependencies = []
 [project.optional-dependencies]
 # a second, independent draft-2020-12 validator for cross-checking hsenv.schema_check (not needed at runtime)
 jsonschema = ["jsonschema>=4.18"]
+# the one PDF extractor release projections and rehydration use (hsenv.distribution.pdfium_extractor; DESIGN §3.6)
+pdf = ["pypdfium2"]
 test = ["pytest>=7"]
 dev = ["jsonschema>=4.18", "pytest>=7"]
 

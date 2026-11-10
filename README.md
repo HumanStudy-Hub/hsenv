@@ -19,6 +19,10 @@ numbers.
   scored 0.
 - **Serving** to outside agents over MCP (stdio) or HTTP (`hsenv-serve-mcp`, `hsenv-serve-http`), with a
   participant view that leaks nothing and an operator view behind a token. See [SERVE.md](SERVE.md).
+- **Release projections and rehydration** (`hsenv.release.project`, `hsenv.rehydrate`): structure always ships;
+  participant-facing text of a source that may not be redistributed is replaced by same-length placeholders with
+  a locator and a per-item hash, and put back on the user's machine from their own copy of the source. See
+  [DESIGN.md §3.6](DESIGN.md).
 - **Schemas** for `protocol.json`, `study.json` and `run.json` (JSON Schema 2020-12, shipped in the package) and a
   stdlib validator (`hsenv-schema-check`).
 
@@ -29,7 +33,7 @@ This repository holds the engine only. It contains no study protocols; the test 
 ## Install
 
 ```bash
-pip install git+https://github.com/HumanStudy-Hub/hsenv@v0.8.0
+pip install git+https://github.com/HumanStudy-Hub/hsenv@v0.8.1
 ```
 
 For development:
@@ -99,7 +103,8 @@ whether it was run at the official (human analysed) n, and records the protocol 
 
 ## Documentation
 
-- [DESIGN.md](DESIGN.md): the rules, the protocol format, the State, and the evaluation rules.
+- [DESIGN.md](DESIGN.md): the rules, the protocol format, distribution tiers, the State, and the evaluation rules.
+- [CHANGELOG.md](CHANGELOG.md): what changed in each release.
 - [SERVE.md](SERVE.md): the MCP and HTTP servers.
 - `schema/*.v1.json`: the machine-readable contracts.
 
