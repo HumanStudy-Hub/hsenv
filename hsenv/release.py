@@ -1290,7 +1290,7 @@ def _scan(p, held_texts, cites=None):
     return replaced, leaks, screen
 
 
-_SCANNED_JSON = ("effects.json", "study.json", "capabilities.json", "sources/source.json")
+_SCANNED_JSON = ("effects.json", "study.json", "capabilities.json", "sources/source.json", "program.json")
 
 
 def _bib_position(path, name, source_keys=()):
@@ -1301,7 +1301,7 @@ def _bib_position(path, name, source_keys=()):
         return False
     if len(path) == 1:
         return True
-    if len(path) == 2 and path[0] in ("paper", "citation"):
+    if len(path) == 2 and (path[0] in ("paper", "citation") or (name == "program.json" and path[0] == "source")):
         return True
     if name == "sources/source.json":   # a declared source's own entry only
         if len(path) == 2 and path[0] in source_keys:
@@ -1311,7 +1311,7 @@ def _bib_position(path, name, source_keys=()):
     return False
 
 
-def _json_quotes(content, sources_lowered, held_hashes=frozenset(), held_texts=(), name="", source_keys=()):
+def _json_quotes(content, sources_lowered, held_hashes=frozenset(), held_texts=(), name="", source_keys=(), verified_paths=frozenset()):
     """True when no string in a JSON document is held text — whole-string equality (case-folded) with a held text of
     6-15 characters, a shared 16-character fragment with a longer one, or the hash of a held text / part, checked
     for every string and key without exception — and no string outside a bibliographic position shares a
@@ -1344,7 +1344,7 @@ def _json_quotes(content, sources_lowered, held_hashes=frozenset(), held_texts=(
             if held_hit(o):
                 hits.append(o)
                 return
-            if _TOKEN.fullmatch(o.strip()) or _bib_position(path, name, source_keys):
+            if tuple(path) in verified_paths or _TOKEN.fullmatch(o.strip()) or _bib_position(path, name, source_keys):
                 return
             if quote(o):
                 hits.append(o)
@@ -1392,8 +1392,10 @@ def _text_free_of_held(content, texts, hashes):
 
 def distributable(name, projection, content=None, sources=None, extractors=None, held_texts=None):
     """is_public(name), and not a file that may carry text of a non-hosted source. While any source is not hosted
-    (or anything is held): review/** (fidelity notes and check reports quote materials), program.json, package/**
-    and sources/open/** are refused, and artifacts/** only ship when the projection still references them as an
+    (or anything is held): package/** is refused; declared hosted originals require exact licensed bytes.
+    Program and allowed review files require all pinned restricted sources and quote/held-text scans.
+    Program cited quotes and summary overlap windows may use exact verified hosted provenance.
+    artifacts/** only ship when the projection still references them as an
     image it did not hold. sourcetext/ files and blind readings ship only for a hosted source with nothing held.
     Names are compared normalised (posix normpath) and case-folded, except sourcetext/ names: `sourcetext/<key>.txt`
     or `sourcetext/<key>#…` must name a declared hosted source key exactly. variants/** is refused (a variant needs
@@ -1443,7 +1445,19 @@ def distributable(name, projection, content=None, sources=None, extractors=None,
         return doc == projection and (projection.get("distribution") or {}).get("strict") is True
     if low.startswith("variants/"):
         return all_hosted
-    if low in _SCANNED_JSON and not all_hosted:
+    if low.startswith("sources/open/") and not all_hosted:
+        if held or not isinstance(content, bytes) or (projection.get("distribution") or {}).get("strict") is not True:
+            return False
+        for record in srcs.values():
+            if not isinstance(record, dict) or record.get("file") != n:
+                continue
+            d = record.get("distribution") or {}
+            sha = d.get("sha256") or record.get("sha256")
+            if d.get("tier") == "hosted" and hosted_licence_ok(d.get("licence")) and d.get("attribution") and sha == _d.sha256(content):
+                return True
+        return False
+    review_text = low.startswith("review/") and low.endswith((".md", ".txt", ".json"))
+    if (low in _SCANNED_JSON or review_text) and not all_hosted:
         if content is None or not sources:
             return False
         declared = [str(k) for k, t in ((k, (v.get("distribution") or {}).get("tier") if isinstance(v, dict) else None)
@@ -1451,6 +1465,14 @@ def distributable(name, projection, content=None, sources=None, extractors=None,
                     if t != "hosted"]
         if any(k not in sources for k in declared):
             return False   # every non-hosted source must be scanned against
+        if low == "program.json" or review_text:
+            if (projection.get("distribution") or {}).get("strict") is not True:
+                return False
+            for k in declared:
+                record = srcs.get(k) or {}
+                sha = (record.get("distribution") or {}).get("sha256") or record.get("sha256")
+                if sha != _d.sha256(sources[k]):
+                    return False
         low_src = []
         for k, b in sources.items():
             d = (srcs.get(k) or {}).get("distribution") if isinstance(srcs.get(k), dict) else None
@@ -1466,7 +1488,73 @@ def distributable(name, projection, content=None, sources=None, extractors=None,
         if rec is None:
             return False
         texts, hashes = rec
-        return _json_quotes(content, low_src, hashes, texts, low, set(srcs) if isinstance(srcs, dict) else set())
+        if review_text and not low.endswith(".json"):
+            if isinstance(content, bytes):
+                try:
+                    content = content.decode("utf-8")
+                except UnicodeDecodeError:
+                    return False
+            if not isinstance(content, str):
+                return False
+            content = {"review": content}
+        verified = set()
+        if low == "program.json":
+            try:
+                doc = json.loads(content) if isinstance(content, (str, bytes)) else content
+                evidence = doc.get("evidence") or []
+                by_id = {e.get("id"): e for e in evidence if isinstance(e, dict)}
+                cache = {}
+                def licensed(text, e):
+                    key = e.get("sourceId")
+                    record = srcs.get(key) or {}
+                    d = record.get("distribution") or {}
+                    raw = sources.get(key)
+                    if not isinstance(text, str) or raw is None or d.get("tier") != "hosted" or not hosted_licence_ok(d.get("licence")) or not d.get("attribution"):
+                        return False
+                    if (d.get("sha256") or record.get("sha256")) != _d.sha256(raw) or e.get("path") != record.get("file"):
+                        return False
+                    if key not in cache:
+                        fmt = d.get("format") or _d.sniff(raw)
+                        cache[key] = (fmt, _d.Scope(_d.units(fmt, raw, extractors)))
+                    fmt, scope = cache[key]
+                    return _d.make_locator(text, fmt, scope.units, extractors, scope=scope) is not None
+                for i, e in enumerate(evidence):
+                    if isinstance(e, dict) and licensed(e.get("quote"), e):
+                        verified.add(("evidence", i, "quote"))
+                restricted = SourceRuns([(str(i), x) for i, x in enumerate(low_src)])
+                def covered(text, ids):
+                    # Summaries can contain shared phrases: every restricted window,
+                    # not merely the first hit, must also occur in verified cited sources.
+                    allowed = []
+                    for eid in ids:
+                        e = by_id.get(eid) if isinstance(eid, str) else None
+                        if e and licensed(e.get("quote"), e):
+                            scope = cache[e["sourceId"]][1]
+                            allowed.extend(_skel_stream(scope.full(w)[0]) for w in ("plain", "dehyph"))
+                    if not allowed:
+                        return False
+                    for form in _forms(text):
+                        sk = _skel(form)
+                        windows = {sk[i:i + _QUOTE_MIN] for i in range(max(0, len(sk) - _QUOTE_MIN + 1))}
+                        windows.update(_cjk_windows(sk))
+                        if any(_wide(ch) for ch in sk) and len(sk) >= 6:
+                            windows.add(sk)
+                        for window in windows:
+                            if _lettered(window) and any(window in source for _, source in restricted.skels) and not any(window in source for source in allowed):
+                                return False
+                    return True
+                def fields(o, path):
+                    if isinstance(o, dict):
+                        ids = o.get("evidenceIds") or []
+                        if isinstance(ids, list) and isinstance(o.get("value"), str) and covered(o["value"], ids):
+                            verified.add(tuple(path + ["value"]))
+                        for k, v in o.items(): fields(v, path + [k])
+                    elif isinstance(o, list):
+                        for i, v in enumerate(o): fields(v, path + [i])
+                fields(doc, [])
+            except (ValueError, TypeError, AttributeError, KeyError):
+                return False
+        return _json_quotes(content, low_src, hashes, texts, low, set(srcs) if isinstance(srcs, dict) else set(), verified)
     if low.startswith(("review/", "package/", "sources/open/")) or low == "program.json":
         return all_hosted
 
