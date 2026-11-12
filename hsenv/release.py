@@ -1299,6 +1299,8 @@ def _bib_position(path, name, source_keys=()):
     `citation` object, and in sources/SOURCE.json a source entry's own bibliographic field."""
     if not path or not isinstance(path[-1], str) or path[-1] not in _BIB:
         return False
+    if name == "program.json":
+        return False   # all Program bibliography is explicitly source-bound
     if len(path) == 1:
         return True
     if len(path) == 2 and path[0] in ("paper", "citation"):
@@ -1311,13 +1313,22 @@ def _bib_position(path, name, source_keys=()):
     return False
 
 
+def _unique_json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON object key")
+        result[key] = value
+    return result
+
+
 def _json_quotes(content, sources_lowered, held_hashes=frozenset(), held_texts=(), name="", source_keys=(), verified_paths=frozenset()):
     """True when no string in a JSON document is held text — whole-string equality (case-folded) with a held text of
     6-15 characters, a shared 16-character fragment with a longer one, or the hash of a held text / part, checked
     for every string and key without exception — and no string outside a bibliographic position shares a
     quote-length run with a non-hosted source."""
     try:
-        doc = json.loads(content) if isinstance(content, (bytes, str)) else content
+        doc = json.loads(content, object_pairs_hook=_unique_json_object) if isinstance(content, (bytes, str)) else content
     except ValueError:
         return False
     index = HeldIndex(held_texts, held_hashes)
@@ -1439,7 +1450,7 @@ def distributable(name, projection, content=None, sources=None, extractors=None,
         if content is None:
             return False
         try:
-            doc = json.loads(content) if isinstance(content, (bytes, str)) else content
+            doc = json.loads(content, object_pairs_hook=_unique_json_object) if isinstance(content, (bytes, str)) else content
         except ValueError:
             return False
         return doc == projection and (projection.get("distribution") or {}).get("strict") is True
@@ -1500,7 +1511,7 @@ def distributable(name, projection, content=None, sources=None, extractors=None,
         verified = set()
         if low == "program.json":
             try:
-                doc = json.loads(content) if isinstance(content, (str, bytes)) else content
+                doc = json.loads(content, object_pairs_hook=_unique_json_object) if isinstance(content, (str, bytes)) else content
                 evidence = doc.get("evidence") or []
                 by_id = {e.get("id"): e for e in evidence if isinstance(e, dict)}
                 cache = {}
@@ -1528,6 +1539,8 @@ def distributable(name, projection, content=None, sources=None, extractors=None,
                             for field, text in primary.items():
                                 if field in _BIB and licensed(text, e):
                                     verified.add(("source", field))
+                            if licensed(doc.get("title"), e):
+                                verified.add(("title",))
                 for i, e in enumerate(evidence):
                     if isinstance(e, dict) and licensed(e.get("quote"), e):
                         verified.add(("evidence", i, "quote"))

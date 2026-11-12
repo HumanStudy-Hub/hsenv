@@ -57,3 +57,10 @@ class MixedFiles(unittest.TestCase):
         self.assertFalse(self.allowed('program.json',p,s,d))
         p,s,d=self.fixture();d['source']={'title':self.private_text,'filename':'sources/open/paper.txt'}
         self.assertFalse(self.allowed('program.json',p,s,d))
+
+    def test_top_level_title_and_duplicate_keys_not_exempt(self):
+        p,s,d=self.fixture();d['title']=self.private_text
+        self.assertFalse(self.allowed('program.json',p,s,d))
+        for name in ['program.json','review/checks-latest.json']:
+            raw='{"comment":'+json.dumps(self.private_text)+',"comment":"harmless"}'
+            self.assertFalse(self.allowed(name,p,s,raw))
