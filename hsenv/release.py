@@ -356,6 +356,7 @@ def project(protocol, tiers=None, sources=None, extractors=None, strict=True,
         return sc is not None and _d.make_locator(text, fmt, sc.units, extractors, scope=sc) is not None
 
     hosted_unconfirmed, low_cache, hosted_missing, non_nfc, uncited_images = [], {}, set(), [], []
+    verified_hosted_slots = set()
     any_non_hosted = any(d.get("tier") != "hosted" for d in dists.values())
     for path, cont, key, cf, kind in _slots(p):
         if computed(path):
@@ -366,7 +367,16 @@ def project(protocol, tiers=None, sources=None, extractors=None, strict=True,
         if not cs:
             continue   # uncited / missing: it ships (uncited source text is caught below)
         value = cont.get("src") if kind == "image" else cont[key]
-        if any(hosted_prints(c, value) for c in cs):
+        hosted_matches = [c for c in cs if hosted_prints(c, value)]
+        if hosted_matches:
+            # Remember only this exact text slot, with verified original bytes. A
+            # matching restricted reference must not override a licensed source.
+            for c in hosted_matches:
+                src = c.get("source")
+                declared = msrc.get(src) or {}
+                sha = (dists.get(src) or {}).get("sha256") or declared.get("sha256")
+                if kind != "image" and src in sources and sha == _d.sha256(sources[src]):
+                    verified_hosted_slots.add(tuple(path))
             continue   # a hosted source prints it: it ships
         if any(tier(c.get("source")) == "hosted" and c.get("label") in ("verbatim", "reported") for c in cs) \
                 and not any(tier(c.get("source")) != "hosted" for c in cs):
@@ -565,11 +575,30 @@ def project(protocol, tiers=None, sources=None, extractors=None, strict=True,
         def screen_quote(text):   # operator / uncited screen text: run rule, whole rule for CJK only
             return runs.quoted(text, latin=False)
 
+        def bound_cell_key(path, key):
+            # Reported interaction cells use level_a|level_b as an index, not prose.
+            # Levels themselves remain subject to normal computed/literal checks.
+            if len(path) != 5 or path[:2] != ["analysis", "effects"] or path[3:] != ["reported", "cells"]:
+                return False
+            effects = (p.get("analysis") or {}).get("effects")
+            if not isinstance(effects, list) or not isinstance(path[2], int):
+                return False
+            effect = effects[path[2]]
+            c = effect.get("compute") if isinstance(effect, dict) else None
+            if not isinstance(c, dict) or c.get("op") != "interaction":
+                return False
+            aa, bb = c.get("a_levels"), c.get("b_levels")
+            if not isinstance(aa, list) or not isinstance(bb, list):
+                return False
+            if not all(isinstance(x, str) and _IDENT.fullmatch(x) for x in aa + bb):
+                return False
+            return key in {a + "|" + b for a in aa for b in bb}
+
         def quote_walk(o, path):
             if isinstance(o, dict):
                 items = list(o.items())
                 for k in o:   # a dict key cannot be withheld: source text in a key is an error, everywhere
-                    if isinstance(k, str) and not _TOKEN.fullmatch(k.strip()) and \
+                    if isinstance(k, str) and not bound_cell_key(path, k) and not _TOKEN.fullmatch(k.strip()) and \
                             (found_in(k) is not None or whole_in_source(k)):   # the same rules as for values
                         key_quotes.append(_ptr(path + [k]))
             elif isinstance(o, list):
@@ -582,6 +611,8 @@ def project(protocol, tiers=None, sources=None, extractors=None, strict=True,
                                            or (path == ["meta"] and k == "citation")):
                     continue   # bibliographic strings (the citation, a source's title …); _scan still checks them
                 if isinstance(v, str):
+                    if tuple(path + [k]) in verified_hosted_slots:
+                        continue   # exact, cited, licensed and hash-verified text only
                     if computed(path, k):
                         continue   # computed: never held or withheld; the computed check below refuses quotes
                     if _is_withheld(v) or set(v) == {_d.PLACEHOLDER} or _TOKEN.fullmatch(v.strip()):
