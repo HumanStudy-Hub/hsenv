@@ -195,6 +195,8 @@ def _slots(p):
             if isinstance(r.get("validate"), dict):
                 vd = r["validate"]
                 for key in [k for k in vd if "message" in k]:
+                    if key == "message_label" and vd[key] == "missing" and vd.get("message") is None:
+                        continue   # explicit absence of feedback, not participant wording
                     text_at(vd, key, rp + ["validate"], _own(vd, key) or _own(vd) or rc)
                 for key in ("equals", "contains", "pattern"):   # the answer the screen accepted: source text?
                     text_at(vd, key, rp + ["validate"], _own(vd) or rc, "maybe")
