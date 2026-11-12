@@ -47,3 +47,13 @@ class MixedFiles(unittest.TestCase):
         p,s,d=self.fixture()
         p['distribution']['held']={'h1':{'kind':'text','source':'reference','text_sha256':D.text_sha256(self.open_text)}}
         self.assertFalse(release.distributable('program.json',p,content=json.dumps(d),sources=s,held_texts={'h1':self.open_text}))
+
+    def test_mixed_cjk_window_and_unverified_title_remain_blocked(self):
+        p,s,d=self.fixture()
+        phrase='我用LongBrandName测量作业'
+        s['reference']=phrase.encode()
+        p['meta']['sources']['reference']['distribution']['sha256']=D.sha256(s['reference'])
+        d['nodes'][0]['fields'][0]['value']='The survey prompt says '+phrase+' in this workflow.'
+        self.assertFalse(self.allowed('program.json',p,s,d))
+        p,s,d=self.fixture();d['source']={'title':self.private_text,'filename':'sources/open/paper.txt'}
+        self.assertFalse(self.allowed('program.json',p,s,d))

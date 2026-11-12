@@ -1301,7 +1301,7 @@ def _bib_position(path, name, source_keys=()):
         return False
     if len(path) == 1:
         return True
-    if len(path) == 2 and (path[0] in ("paper", "citation") or (name == "program.json" and path[0] == "source")):
+    if len(path) == 2 and path[0] in ("paper", "citation"):
         return True
     if name == "sources/source.json":   # a declared source's own entry only
         if len(path) == 2 and path[0] in source_keys:
@@ -1518,6 +1518,16 @@ def distributable(name, projection, content=None, sources=None, extractors=None,
                         cache[key] = (fmt, _d.Scope(_d.units(fmt, raw, extractors)))
                     fmt, scope = cache[key]
                     return _d.make_locator(text, fmt, scope.units, extractors, scope=scope) is not None
+                # Program bibliographic strings are not implicitly trusted; bind
+                # them to the declared licensed source and actual source bytes.
+                primary = doc.get("source")
+                if isinstance(primary, dict):
+                    for key, record in srcs.items():
+                        if isinstance(record, dict) and primary.get("filename") == record.get("file"):
+                            e = {"sourceId": key, "path": record.get("file")}
+                            for field, text in primary.items():
+                                if field in _BIB and licensed(text, e):
+                                    verified.add(("source", field))
                 for i, e in enumerate(evidence):
                     if isinstance(e, dict) and licensed(e.get("quote"), e):
                         verified.add(("evidence", i, "quote"))
@@ -1533,10 +1543,13 @@ def distributable(name, projection, content=None, sources=None, extractors=None,
                             allowed.extend(_skel_stream(scope.full(w)[0]) for w in ("plain", "dehyph"))
                     if not allowed:
                         return False
+                    allowed_wide = {w for source in allowed for w in _cjk_windows(source)}
                     for form in _forms(text):
                         sk = _skel(form)
+                        for window in _cjk_windows(sk):
+                            if window in restricted.wide and window not in allowed_wide:
+                                return False
                         windows = {sk[i:i + _QUOTE_MIN] for i in range(max(0, len(sk) - _QUOTE_MIN + 1))}
-                        windows.update(_cjk_windows(sk))
                         if any(_wide(ch) for ch in sk) and len(sk) >= 6:
                             windows.add(sk)
                         for window in windows:
