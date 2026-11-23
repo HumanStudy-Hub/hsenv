@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Platform IDs.** `Session.synthetic_text_id(field_id, identity)` returns a stable administrative value that
+  passes the field's validation (`min_chars`, `contains`, and single-class width patterns such as
+  `^[a-f0-9]{24}$`), or `None` when none can. `Session.step` and `GroupSession.step` take `system_filled`: those
+  values validate the page but never enter `answers`, refusal records or scoring. Mirrors HumanStudy Desktop #170.
+
 ## 0.8.1 (2026-11-10)
 
 ### Added
